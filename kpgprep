@@ -1,0 +1,47 @@
+#! /bin/bash
+beta=0
+
+if [ "$1" = "-b" ]; then
+  beta=1
+  shift
+fi
+
+if [ $# -ne 2 ]; then
+  echo "Usage: kpgprep [-b] kore_tag konferpug_tag"
+  exit 1
+fi
+
+kore=$1
+kpg=$2
+
+wdir=`mktemp -d /tmp/kpgprep-XXXXX`
+pushd "${wdir}" > /dev/null 2>&1
+git clone -b r${kpg} git@github.com:kahluamods/konferpug
+git clone -b r${kore} git@github.com:kahluamods/kore
+
+mv konferpug KKonferPUG
+mv kore KKonferPUG/KKore
+
+pushd KKonferPUG > /dev/null 2>&1
+rm -fr .git KKore/.git KKore/KKore.toc KKore/Textures/PNG
+flist=`ls -1 *.lua KKore/*.lua *.toc *.xml KKore/*.xml`
+
+for file in ${flist}; do 
+  echo Processing $file
+  sed -i -e '/@debug-start@/,/@debug-end@/d' \
+    -e '/@release-start@/,/@release-end@/ s/^# //' \
+    -e '/@release-start@/d' \
+    -e '/@release-end@/d' \
+    -e '/@debug-delete@/d' \
+    -e "s/@revision@/${kpg}/g" \
+    $file
+done
+popd > /dev/null 2>&1
+
+zip -rq9 /tmp/KKonferPUG-r${kpg}.zip KKonferPUG
+
+popd > /dev/null 2>&1
+
+rm -fr ${wdir}
+
+exit 0
